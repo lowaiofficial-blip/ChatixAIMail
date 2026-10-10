@@ -7,10 +7,10 @@ const admin = require('firebase-admin');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// Middleware - Statik dosyalar public klasöründen sunuluyor
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname)));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Firebase Admin Initialization
 try {
@@ -147,7 +147,6 @@ Yalnızca ve yalnızca aşağıdaki JSON formatında yanıt ver. Markdown kod bl
 }
     `;
 
-    // En kararlı ve hızlı modellerden oluşan yedekleme sırası
     const modelsToTry = [
       'gemini-2.5-flash',
       'gemini-1.5-flash',
@@ -260,13 +259,13 @@ app.post('/api/admin/send-bulk', async (req, res) => {
   }
 });
 
-// Statik Rotalar (HTML Dosyalarını Doğru Sunma)
+// Statik Rotalar (public klasöründen doğru yönlendirme)
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'admin.html'));
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
 // Sunucuyu Dinle
