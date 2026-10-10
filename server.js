@@ -29,7 +29,7 @@ try {
 
 const db = admin.apps.length ? admin.firestore() : null;
 
-// Geçici Taslak E-Posta Hafızası (In-Memory Pending Mail)
+// Geçici Taslak E-Posta Hafızası
 let pendingEmail = null;
 
 // Helper: Brevo HTTP API üzerinden Mail Gönderimi
@@ -84,20 +84,20 @@ app.post('/api/subscribe', async (req, res) => {
       subscribedAt: admin.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
 
-    // Hoş Geldin E-Postası Şablonu (Banner Yok, Minimalist)
+    // Hoş Geldin E-Postası Şablonu (Minimalist & Premium)
     const welcomeHtml = `
-      <div style="background-color: #0b0c10; color: #ffffff; padding: 40px 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center;">
-        <div style="max-width: 600px; margin: 0 auto; background: #1f2833; padding: 30px; border-radius: 12px; border: 1px solid #333;">
-          <h1 style="color: #00f2fe; margin-bottom: 10px;">ChatixAI</h1>
-          <h2 style="color: #ffffff; font-size: 20px;">Dünyasına Hoş Geldin! ✨</h2>
-          <p style="color: #c5c6c7; line-height: 1.6; font-size: 15px; margin-top: 20px;">
-            Aramıza katıldığın için heyecanlıyız! En yeni model güncellemelerimizden, yapay zeka ipuçlarından ve özel duyurulardan ilk senin haberin olacak.
+      <div style="background-color: #0b0c10; color: #ffffff; padding: 50px 20px; font-family: 'Inter', 'Segoe UI', Helvetica, Arial, sans-serif; text-align: center;">
+        <div style="max-width: 600px; margin: 0 auto; background: #1f2833; padding: 40px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+          <h1 style="color: #00f2fe; margin-bottom: 10px; font-size: 28px; letter-spacing: -0.5px;">ChatixAI</h1>
+          <h2 style="color: #ffffff; font-size: 20px; font-weight: 600;">Ekosistemine Hoş Geldin! ✨</h2>
+          <p style="color: #c5c6c7; line-height: 1.7; font-size: 15px; margin-top: 20px;">
+            Aramıza katıldığın için heyecanlıyız! En yeni model güncellemelerimizden, yapay zeka ipuçlarından ve özel erken erişim duyurularından ilk senin haberin olacak.
           </p>
-          <div style="margin-top: 30px;">
-            <a href="https://chatix.ai" style="background: linear-gradient(135deg, #6f42c1, #00f2fe); color: #fff; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block;">Platformu Keşfet</a>
+          <div style="margin-top: 35px;">
+            <a href="https://chatix.ai" style="background: linear-gradient(135deg, #6f42c1, #00f2fe); color: #fff; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 600; display: inline-block; box-shadow: 0 5px 20px rgba(0,242,254,0.3);">Platformu Keşfet</a>
           </div>
-          <hr style="border: 0; border-top: 1px solid #333; margin: 30px 0;">
-          <p style="color: #666; font-size: 12px;">© 2026 ChatixAI. Tüm hakları saklıdır.</p>
+          <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 35px 0;">
+          <p style="color: #8c8f94; font-size: 12px;">© 2026 ChatixAI. Tüm hakları saklıdır.</p>
         </div>
       </div>
     `;
@@ -120,7 +120,7 @@ app.post('/api/subscribe', async (req, res) => {
   }
 });
 
-// 2. POST /api/admin/generate-email (Gemini 3.5 Flash ile E-Posta Oluşturma)
+// 2. POST /api/admin/generate-email (Otomatik Model Fallback Mekanizmalı Gemini Çağrısı)
 app.post('/api/admin/generate-email', async (req, res) => {
   try {
     const { prompt } = req.body;
@@ -147,22 +147,45 @@ Yalnızca ve yalnızca aşağıdaki JSON formatında yanıt ver. Markdown kod bl
 }
     `;
 
-    // Güncel Gemini 3.5 Flash Modeli
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-    
-    const geminiResponse = await axios.post(geminiUrl, {
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: `${systemInstruction}\n\nKullanıcının Duyuru Metni:\n${prompt}` }
-          ]
+    // Yoğunluk anlarına karşı sırasıyla denenecel güncel modeller (Fallback Zinciri)
+    const modelsToTry = [
+      'gemini-3.5-flash',
+      'gemini-2.5-flash',
+      'gemini-1.5-flash'
+    ];
+
+    let geminiResponse = null;
+    let lastError = null;
+
+    for (const modelName of modelsToTry) {
+      try {
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
+        geminiResponse = await axios.post(geminiUrl, {
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                { text: `${systemInstruction}\n\nKullanıcının Duyuru Metni:\n${prompt}` }
+              ]
+            }
+          ],
+          generationConfig: {
+            responseMimeType: "application/json"
+          }
+        });
+        if (geminiResponse && geminiResponse.data) {
+          console.log(`✅ Başarıyla kullanılan Gemini modeli: ${modelName}`);
+          break;
         }
-      ],
-      generationConfig: {
-        responseMimeType: "application/json"
+      } catch (err) {
+        lastError = err;
+        console.warn(`⚠️ ${modelName} modeli yoğunluk hatası verdi, sonraki modele geçiliyor...`);
       }
-    });
+    }
+
+    if (!geminiResponse) {
+      throw new Error(lastError?.response?.data?.error?.message || 'Tüm Gemini modelleri şu an yoğun, lütfen biraz sonra tekrar deneyin.');
+    }
 
     const rawText = geminiResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!rawText) {
@@ -189,7 +212,7 @@ Yalnızca ve yalnızca aşağıdaki JSON formatında yanıt ver. Markdown kod bl
 
   } catch (error) {
     console.error('E-posta üretme hatası:', error?.response?.data || error.message);
-    return res.status(500).json({ success: false, message: 'Yapay zeka e-posta taslağını oluştururken bir hata oluştu.' });
+    return res.status(500).json({ success: false, message: error.message || 'Yapay zeka e-posta taslağını oluştururken bir hata oluştu.' });
   }
 });
 
@@ -197,7 +220,7 @@ Yalnızca ve yalnızca aşağıdaki JSON formatında yanıt ver. Markdown kod bl
 app.post('/api/admin/send-bulk', async (req, res) => {
   try {
     if (!pendingEmail) {
-      return res.status(400).json({ success: false, message: 'Gönderilecek onaylanmış bir e-posta taslağı bulunamadı. Önce bir taslak oluşturun.' });
+      return res.status(400).json({ success: false, message: 'Gönderilecek onaylanmış bir e-posta taslağı bulunamadı.' });
     }
 
     if (!db) {
