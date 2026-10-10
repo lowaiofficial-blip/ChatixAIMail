@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname)));
 
 // Firebase Admin Initialization
 try {
@@ -84,7 +84,7 @@ app.post('/api/subscribe', async (req, res) => {
       subscribedAt: admin.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
 
-    // Hoş Geldin E-Postası Şablonu (Minimalist & Premium)
+    // Hoş Geldin E-Postası Şablonu
     const welcomeHtml = `
       <div style="background-color: #0b0c10; color: #ffffff; padding: 50px 20px; font-family: 'Inter', 'Segoe UI', Helvetica, Arial, sans-serif; text-align: center;">
         <div style="max-width: 600px; margin: 0 auto; background: #1f2833; padding: 40px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
@@ -94,7 +94,7 @@ app.post('/api/subscribe', async (req, res) => {
             Aramıza katıldığın için heyecanlıyız! En yeni model güncellemelerimizden, yapay zeka ipuçlarından ve özel erken erişim duyurularından ilk senin haberin olacak.
           </p>
           <div style="margin-top: 35px;">
-            <a href="https://chatix.ai" style="background: linear-gradient(135deg, #6f42c1, #00f2fe); color: #fff; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 600; display: inline-block; box-shadow: 0 5px 20px rgba(0,242,254,0.3);">Platformu Keşfet</a>
+            <a href="https://chatixai.onrender.com" style="background: linear-gradient(135deg, #6f42c1, #00f2fe); color: #fff; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 600; display: inline-block; box-shadow: 0 5px 20px rgba(0,242,254,0.3);">Platformu Keşfet</a>
           </div>
           <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 35px 0;">
           <p style="color: #8c8f94; font-size: 12px;">© 2026 ChatixAI. Tüm hakları saklıdır.</p>
@@ -120,7 +120,7 @@ app.post('/api/subscribe', async (req, res) => {
   }
 });
 
-// 2. POST /api/admin/generate-email (Otomatik Model Fallback Mekanizmalı Gemini Çağrısı)
+// 2. POST /api/admin/generate-email (Güçlendirilmiş Çoklu Model Fallback Zinciri)
 app.post('/api/admin/generate-email', async (req, res) => {
   try {
     const { prompt } = req.body;
@@ -136,7 +136,7 @@ app.post('/api/admin/generate-email', async (req, res) => {
 
     const systemInstruction = `
 Sen ChatixAI için e-posta bültenleri oluşturan profesyonel bir yapay zeka asistanısın. 
-Görevin, sana verilen metinden yola çıkarak son derece şık, koyu temalı (#0b0c10 arka plan, #1f2833 kartlar, #00f2fe ve #6f42c1 vurgu renkleri), responsive, banner içermeyen (sadece metin ve buton odaklı) ve tüm e-posta istemcileriyle uyumlu inline CSS barındıran HTML bir e-posta taslağı ve bir konu başlığı oluşturmaktır.
+Görevin, sana verilen metinden yola çıkarak son derece şık, koyu temalı (#0b0c10 arka plan, #1f2833 kartlar, #00f2fe ve #6f42c1 vurgu renkleri), responsive, banner içermeyen ve tüm e-posta istemcileriyle uyumlu inline CSS barındıran HTML bir e-posta taslağı ve bir konu başlığı oluşturmaktır. Taslak içerisindeki buton veya yönlendirme linklerini verirken kesinlikle "https://chatixai.onrender.com" adresini kullan.
 
 ÇIKTI FORMATI ZORUNLULUĞU:
 Yalnızca ve yalnızca aşağıdaki JSON formatında yanıt ver. Markdown kod blokları (\`\`\`json vb.), hiçbir ek açıklama veya ön metin EKLEME.
@@ -147,11 +147,11 @@ Yalnızca ve yalnızca aşağıdaki JSON formatında yanıt ver. Markdown kod bl
 }
     `;
 
-    // Yoğunluk anlarına karşı sırasıyla denenecel güncel modeller (Fallback Zinciri)
+    // En kararlı ve hızlı modellerden oluşan yedekleme sırası
     const modelsToTry = [
-      'gemini-3.5-flash',
       'gemini-2.5-flash',
-      'gemini-1.5-flash'
+      'gemini-1.5-flash',
+      'gemini-3.5-flash'
     ];
 
     let geminiResponse = null;
@@ -174,12 +174,12 @@ Yalnızca ve yalnızca aşağıdaki JSON formatında yanıt ver. Markdown kod bl
           }
         });
         if (geminiResponse && geminiResponse.data) {
-          console.log(`✅ Başarıyla kullanılan Gemini modeli: ${modelName}`);
+          console.log(`✅ Başarıyla yanıt veren model: ${modelName}`);
           break;
         }
       } catch (err) {
         lastError = err;
-        console.warn(`⚠️ ${modelName} modeli yoğunluk hatası verdi, sonraki modele geçiliyor...`);
+        console.warn(`⚠️ ${modelName} modeli yoğunluk verdi, sıradakine geçiliyor...`);
       }
     }
 
@@ -260,7 +260,7 @@ app.post('/api/admin/send-bulk', async (req, res) => {
   }
 });
 
-// Statik Rotalar
+// Statik Rotalar (HTML Dosyalarını Doğru Sunma)
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
