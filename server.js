@@ -7,268 +7,116 @@ const admin = require('firebase-admin');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware - Statik dosyalar public klasöründen sunuluyor
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(__dirname));
 
-// Firebase Admin Initialization
+// Firebase Admin
 try {
   if (process.env.FIREBASE_SERVICE_ACCOUNT) {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
-    });
-    console.log('✅ Firebase Admin SDK başarıyla bağlandı.');
-  } else {
-    console.warn('⚠️ FIREBASE_SERVICE_ACCOUNT çevresel değişkeni bulunamadı!');
+    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+    console.log('✅ Firebase bağlandı.');
   }
 } catch (error) {
-  console.error('❌ Firebase Başlatma Hatası:', error.message);
+  console.error('❌ Firebase Hatası:', error.message);
 }
 
 const db = admin.apps.length ? admin.firestore() : null;
-
-// Geçici Taslak E-Posta Hafızası
 let pendingEmail = null;
 
-// Helper: Brevo HTTP API üzerinden Mail Gönderimi
 async function sendBrevoEmail({ to, subject, htmlContent }) {
   const BREVO_API_KEY = process.env.BREVO_API_KEY;
   const SENDER_EMAIL = process.env.SENDER_EMAIL;
-
-  if (!BREVO_API_KEY || !SENDER_EMAIL) {
-    throw new Error('Brevo API anahtarı veya gönderici e-posta adresi eksik.');
-  }
-
-  const recipients = Array.isArray(to) 
-    ? to.map(email => ({ email })) 
-    : [{ email: to }];
-
-  const payload = {
+  
+  const recipients = Array.isArray(to) ? to.map(email => ({ email })) : [{ email: to }];
+  
+  await axios.post('https://api.brevo.com/v3/smtp/email', {
     sender: { name: 'ChatixAI', email: SENDER_EMAIL },
     to: recipients,
-    subject: subject,
-    htmlContent: htmlContent
-  };
-
-  const response = await axios.post('https://api.brevo.com/v3/smtp/email', payload, {
-    headers: {
-      'accept': 'application/json',
-      'api-key': BREVO_API_KEY,
-      'content-type': 'application/json'
-    }
+    subject,
+    htmlContent
+  }, {
+    headers: { 'accept': 'application/json', 'api-key': BREVO_API_KEY, 'content-type': 'application/json' }
   });
-
-  return response.data;
 }
 
-// ------------------- API ENDPOINT'LERİ -------------------
-
-// 1. POST /api/subscribe (Kullanıcı Abonelik Kaydı)
 app.post('/api/subscribe', async (req, res) => {
   try {
     const { email } = req.body;
-
-    if (!email || !email.includes('@')) {
-      return res.status(400).json({ success: false, message: 'Lütfen geçerli bir e-posta adresi girin.' });
+    if (!email || !email.includes('@')) return res.status(400).json({ success: false, message: 'Geçersiz e-posta.' });
+    
+    if (db) {
+      await db.collection('subscribers').doc(email.trim().toLowerCase()).set({
+        email: email.trim().toLowerCase(),
+        subscribedAt: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
     }
 
-    if (!db) {
-      return res.status(500).json({ success: false, message: 'Veritabanı bağlantısı henüz hazır değil.' });
-    }
-
-    const subscriberRef = db.collection('subscribers').doc(email.trim().toLowerCase());
-    await subscriberRef.set({
-      email: email.trim().toLowerCase(),
-      subscribedAt: admin.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-
-    // Hoş Geldin E-Postası Şablonu
     const welcomeHtml = `
-      <div style="background-color: #0b0c10; color: #ffffff; padding: 50px 20px; font-family: 'Inter', 'Segoe UI', Helvetica, Arial, sans-serif; text-align: center;">
-        <div style="max-width: 600px; margin: 0 auto; background: #1f2833; padding: 40px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-          <h1 style="color: #00f2fe; margin-bottom: 10px; font-size: 28px; letter-spacing: -0.5px;">ChatixAI</h1>
-          <h2 style="color: #ffffff; font-size: 20px; font-weight: 600;">Ekosistemine Hoş Geldin! ✨</h2>
-          <p style="color: #c5c6c7; line-height: 1.7; font-size: 15px; margin-top: 20px;">
-            Aramıza katıldığın için heyecanlıyız! En yeni model güncellemelerimizden, yapay zeka ipuçlarından ve özel erken erişim duyurularından ilk senin haberin olacak.
-          </p>
-          <div style="margin-top: 35px;">
-            <a href="https://chatixai.onrender.com" style="background: linear-gradient(135deg, #6f42c1, #00f2fe); color: #fff; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 600; display: inline-block; box-shadow: 0 5px 20px rgba(0,242,254,0.3);">Platformu Keşfet</a>
-          </div>
-          <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 35px 0;">
-          <p style="color: #8c8f94; font-size: 12px;">© 2026 ChatixAI. Tüm hakları saklıdır.</p>
+      <div style="background-color: #0b0c10; color: #ffffff; padding: 50px 20px; font-family: sans-serif; text-align: center;">
+        <div style="max-width: 600px; margin: 0 auto; background: #1f2833; padding: 40px; border-radius: 16px;">
+          <h1 style="color: #00f2fe;">ChatixAI</h1>
+          <h2>Ekosistemine Hoş Geldin! ✨</h2>
+          <p style="color: #c5c6c7;">En yeni model güncellemelerinden ve duyurulardan ilk senin haberin olacak.</p>
+          <a href="https://chatixai.onrender.com" style="background: linear-gradient(135deg, #6f42c1, #00f2fe); color: #fff; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 20px;">Platformu Keşfet</a>
         </div>
       </div>
     `;
-
-    try {
-      await sendBrevoEmail({
-        to: email.trim().toLowerCase(),
-        subject: 'ChatixAI Dünyasına Hoş Geldin! ✨',
-        htmlContent: welcomeHtml
-      });
-    } catch (mailError) {
-      console.error('Hoş geldin maili gönderilemedi:', mailError.message);
-    }
-
-    return res.status(200).json({ success: true, message: 'Harika! Kaydınız başarıyla oluşturuldu.' });
-
-  } catch (error) {
-    console.error('Abonelik hatası:', error);
-    return res.status(500).json({ success: false, message: 'Sunucu hatası oluştu. Lütfen tekrar deneyin.' });
+    
+    await sendBrevoEmail({ to: email.trim().toLowerCase(), subject: 'ChatixAI Dünyasına Hoş Geldin! ✨', htmlContent: welcomeHtml }).catch(() => {});
+    res.status(200).json({ success: true, message: 'Kayıt başarıyla oluşturuldu.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Sunucu hatası.' });
   }
 });
 
-// 2. POST /api/admin/generate-email (Güçlendirilmiş Çoklu Model Fallback Zinciri)
 app.post('/api/admin/generate-email', async (req, res) => {
   try {
     const { prompt } = req.body;
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+    const systemInstruction = `Sen ChatixAI için e-posta bültenleri oluşturan bir asistansın. Koyu tema (#0b0c10), şık responsive HTML üret. Butonlarda kesinlikle "https://chatixai.onrender.com" kullan. Sadece JSON döndür: {"subject": "...", "htmlContent": "..."}`;
 
-    if (!prompt) {
-      return res.status(400).json({ success: false, message: 'Lütfen bir duyuru metni girin.' });
-    }
-
-    if (!GEMINI_API_KEY) {
-      return res.status(500).json({ success: false, message: 'GEMINI_API_KEY çevresel değişkeni tanımlanmamış.' });
-    }
-
-    const systemInstruction = `
-Sen ChatixAI için e-posta bültenleri oluşturan profesyonel bir yapay zeka asistanısın. 
-Görevin, sana verilen metinden yola çıkarak son derece şık, koyu temalı (#0b0c10 arka plan, #1f2833 kartlar, #00f2fe ve #6f42c1 vurgu renkleri), responsive, banner içermeyen ve tüm e-posta istemcileriyle uyumlu inline CSS barındıran HTML bir e-posta taslağı ve bir konu başlığı oluşturmaktır. Taslak içerisindeki buton veya yönlendirme linklerini verirken kesinlikle "https://chatixai.onrender.com" adresini kullan.
-
-ÇIKTI FORMATI ZORUNLULUĞU:
-Yalnızca ve yalnızca aşağıdaki JSON formatında yanıt ver. Markdown kod blokları (\`\`\`json vb.), hiçbir ek açıklama veya ön metin EKLEME.
-
-{
-  "subject": "E-posta Konu Başlığı (Emoji içerebilir)",
-  "htmlContent": "<div style=\\"...\\">Tüm HTML Kodları Inline CSS Ile Burada</div>"
-}
-    `;
-
-    const modelsToTry = [
-      'gemini-2.5-flash',
-      'gemini-1.5-flash',
-      'gemini-3.5-flash'
-    ];
-
+    const models = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-3.5-flash'];
     let geminiResponse = null;
-    let lastError = null;
 
-    for (const modelName of modelsToTry) {
+    for (const model of models) {
       try {
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
-        geminiResponse = await axios.post(geminiUrl, {
-          contents: [
-            {
-              role: 'user',
-              parts: [
-                { text: `${systemInstruction}\n\nKullanıcının Duyuru Metni:\n${prompt}` }
-              ]
-            }
-          ],
-          generationConfig: {
-            responseMimeType: "application/json"
-          }
+        geminiResponse = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`, {
+          contents: [{ role: 'user', parts: [{ text: `${systemInstruction}\n\nMetin:\n${prompt}` }] }],
+          generationConfig: { responseMimeType: "application/json" }
         });
-        if (geminiResponse && geminiResponse.data) {
-          console.log(`✅ Başarıyla yanıt veren model: ${modelName}`);
-          break;
-        }
-      } catch (err) {
-        lastError = err;
-        console.warn(`⚠️ ${modelName} modeli yoğunluk verdi, sıradakine geçiliyor...`);
-      }
+        if (geminiResponse?.data) break;
+      } catch (e) {}
     }
 
-    if (!geminiResponse) {
-      throw new Error(lastError?.response?.data?.error?.message || 'Tüm Gemini modelleri şu an yoğun, lütfen biraz sonra tekrar deneyin.');
-    }
+    if (!geminiResponse) throw new Error('Modeller yoğun, tekrar deneyin.');
+    const rawText = geminiResponse.data.candidates[0].content.parts[0].text;
+    const parsedData = JSON.parse(rawText.replace(/```json/g, '').replace(/```/g, '').trim());
 
-    const rawText = geminiResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!rawText) {
-      throw new Error('Gemini API geçerli bir yanıt üretmedi.');
-    }
-
-    const cleanJsonText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-    const parsedData = JSON.parse(cleanJsonText);
-
-    if (!parsedData.subject || !parsedData.htmlContent) {
-      throw new Error('Üretilen içerik beklenen JSON yapısına uymuyor.');
-    }
-
-    pendingEmail = {
-      subject: parsedData.subject,
-      htmlContent: parsedData.htmlContent,
-      createdAt: new Date()
-    };
-
-    return res.status(200).json({
-      success: true,
-      data: pendingEmail
-    });
-
-  } catch (error) {
-    console.error('E-posta üretme hatası:', error?.response?.data || error.message);
-    return res.status(500).json({ success: false, message: error.message || 'Yapay zeka e-posta taslağını oluştururken bir hata oluştu.' });
+    pendingEmail = parsedData;
+    res.status(200).json({ success: true, data: pendingEmail });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message || 'Hata oluştu.' });
   }
 });
 
-// 3. POST /api/admin/send-bulk (Toplu E-Posta Gönderimi)
 app.post('/api/admin/send-bulk', async (req, res) => {
   try {
-    if (!pendingEmail) {
-      return res.status(400).json({ success: false, message: 'Gönderilecek onaylanmış bir e-posta taslağı bulunamadı.' });
-    }
-
-    if (!db) {
-      return res.status(500).json({ success: false, message: 'Veritabanı bağlantısı yok.' });
-    }
-
+    if (!pendingEmail) return res.status(400).json({ success: false, message: 'Taslak yok.' });
     const snapshot = await db.collection('subscribers').get();
-    if (snapshot.empty) {
-      return res.status(404).json({ success: false, message: 'Sistemde kayıtlı hiçbir abone bulunamadı.' });
-    }
+    const emails = [];
+    snapshot.forEach(doc => emails.push(doc.id));
 
-    const subscriberEmails = [];
-    snapshot.forEach(doc => {
-      if (doc.exists && doc.id) {
-        subscriberEmails.push(doc.id);
-      }
-    });
-
-    await sendBrevoEmail({
-      to: subscriberEmails,
-      subject: pendingEmail.subject,
-      htmlContent: pendingEmail.htmlContent
-    });
-
-    const sentCount = subscriberEmails.length;
+    await sendBrevoEmail({ to: emails, subject: pendingEmail.subject, htmlContent: pendingEmail.htmlContent });
     pendingEmail = null;
-
-    return res.status(200).json({
-      success: true,
-      message: `Toplu e-posta başarıyla ${sentCount} aboneye gönderildi!`,
-      count: sentCount
-    });
-
-  } catch (error) {
-    console.error('Toplu gönderim hatası:', error?.response?.data || error.message);
-    return res.status(500).json({ success: false, message: 'Toplu e-posta gönderilirken bir hata oluştu.' });
+    res.status(200).json({ success: true, message: `Mailler ${emails.length} kişiye gönderildi!` });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Gönderim hatası.' });
   }
 });
 
-// Statik Rotalar (public klasöründen doğru yönlendirme)
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 
-app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
-
-// Sunucuyu Dinle
-app.listen(PORT, () => {
-  console.log(`🚀 ChatixAI sunucusu ${PORT} portunda yayında.`);
-});
+app.listen(PORT, () => console.log(`Çalışıyor: ${PORT}`));
