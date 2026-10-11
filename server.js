@@ -8,12 +8,16 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 1. Firebase Başlatma (Firebase Admin SDK)
-// Kendi serviceAccount.json dosyanın yolunu veya yapılandırmanı buraya eklemiştim
+// 1. Firebase Başlatma (Render Environment Variables / JSON içeriğiyle)
 if (!admin.apps.length) {
-    admin.initializeApp({
-        credential: admin.credential.cert(require('./serviceAccountKey.json'))
-    });
+    try {
+        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount)
+        });
+    } catch (err) {
+        console.error("Firebase başlatma hatası:", err.message);
+    }
 }
 const db = admin.firestore();
 
@@ -22,8 +26,8 @@ const transporter = nodemailer.createTransport({
     host: 'smtp-relay.brevo.com',
     port: 587,
     auth: {
-        user: process.env.BREVO_USER, // Brevo kullanıcı adın / e-postan
-        pass: process.env.BREVO_PASS  // Brevo SMTP şifren
+        user: process.env.BREVO_USER,
+        pass: process.env.BREVO_PASS
     }
 });
 
@@ -82,7 +86,15 @@ app.post('/api/send-newsletter', async (req, res) => {
             throw new Error("Hiçbir Gemini modelinden yanıt alınamadı.");
         }
 
-        const emailData = JSON.parse(responseText);
+        // JSON formatındaki yanıtı temizle ve parse et
+        let cleanText = responseText.trim();
+        if (cleanText.startsWith("```json")) {
+            cleanText = cleanText.replace(/^```json/, "").replace(/```$/, "").trim();
+        } else if (cleanText.startsWith("```")) {
+            cleanText = cleanText.replace(/^```/, "").replace(/```$/, "").trim();
+        }
+
+        const emailData = JSON.parse(cleanText);
 
         // Firebase Firestore'dan aboneleri çek
         const subscribersSnapshot = await db.collection('subscribers').get();
@@ -124,6 +136,11 @@ app.post('/api/send-newsletter', async (req, res) => {
         console.error("Sunucu Hatası:", error);
         res.status(500).json({ success: false, error: error.message });
     }
+});
+
+// 5. Basit Test Sayfası / Sağlık Kontrolü Rotası
+app.get('/', (req, res) => {
+    res.send('ChatixAI Mail Servisi Aktif ve Çalışıyor! 🚀');
 });
 
 const PORT = process.env.PORT || 3000;
