@@ -1,295 +1,185 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ChatixAI - Akıllı Bülten Yönetim Paneli</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Inter', sans-serif;
-    }
-
-    body {
-      background-color: #0b0c10;
-      color: #ffffff;
-      padding: 50px 20px;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .admin-card {
-      max-width: 950px;
-      width: 100%;
-      background: rgba(31, 40, 51, 0.6);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(20px);
-      border-radius: 24px;
-      padding: 40px;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-    }
-
-    h1 {
-      font-size: 28px;
-      color: #00f2fe;
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    p.subtitle {
-      color: #c5c6c7;
-      font-size: 14px;
-      margin-bottom: 30px;
-    }
-
-    label {
-      display: block;
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 10px;
-      color: #fff;
-    }
-
-    textarea {
-      width: 100%;
-      height: 130px;
-      background: rgba(11, 12, 16, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 12px;
-      padding: 16px;
-      color: #fff;
-      font-size: 14px;
-      resize: vertical;
-      outline: none;
-      margin-bottom: 20px;
-      transition: border-color 0.3s;
-    }
-
-    textarea:focus {
-      border-color: #00f2fe;
-      box-shadow: 0 0 15px rgba(0, 242, 254, 0.15);
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, #6f42c1, #00f2fe);
-      color: #fff;
-      border: none;
-      padding: 14px 28px;
-      border-radius: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      font-size: 15px;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 15px rgba(111,66,193,0.3);
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(0, 242, 254, 0.4);
-    }
-
-    .btn-primary:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    #previewSection {
-      display: none;
-      margin-top: 35px;
-      padding-top: 30px;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-      animation: fadeIn 0.4s ease;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .subject-box {
-      background: rgba(11, 12, 16, 0.9);
-      padding: 14px 18px;
-      border-radius: 10px;
-      border-left: 4px solid #00f2fe;
-      margin-bottom: 20px;
-      font-weight: 600;
-      font-size: 15px;
-    }
-
-    .iframe-container {
-      width: 100%;
-      height: 480px;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 14px;
-      background: #fff;
-      overflow: hidden;
-      margin-bottom: 24px;
-    }
-
-    iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-    }
-
-    .btn-send {
-      background: #2ecc71;
-      color: #fff;
-      border: none;
-      padding: 16px 32px;
-      border-radius: 12px;
-      font-weight: bold;
-      font-size: 16px;
-      cursor: pointer;
-      width: 100%;
-      transition: background 0.3s, transform 0.2s;
-      box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);
-    }
-
-    .btn-send:hover {
-      background: #27ae60;
-      transform: translateY(-2px);
-    }
-
-    #statusMessage {
-      margin-top: 20px;
-      padding: 14px;
-      border-radius: 10px;
-      display: none;
-      font-size: 14px;
-      font-weight: 500;
-    }
-
-    .status-info { background: rgba(0, 242, 254, 0.12); color: #00f2fe; border: 1px solid rgba(0, 242, 254, 0.4); }
-    .status-success { background: rgba(40, 167, 69, 0.15); color: #2ecc71; border: 1px solid rgba(40, 167, 69, 0.4); }
-    .status-error { background: rgba(220, 53, 69, 0.15); color: #e74c3c; border: 1px solid rgba(220, 53, 69, 0.4); }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ChatixAI | Yönetim Paneli</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;padding:20px;
+  background:radial-gradient(ellipse at 15% 0%,#6f42c155,transparent 40%),#0b0c10;
+  color:#fff;font-family:Arial,sans-serif;
+}
+.card{
+  max-width:900px;margin:20px auto;padding:clamp(20px,4vw,38px);
+  background:#151922;border:1px solid #303746;
+  border-radius:20px;box-shadow:0 20px 70px #0007;
+}
+h1{font-size:clamp(24px,4vw,34px);margin-top:0}
+p{color:#b9c0cf;line-height:1.6}
+label{display:block;font-weight:bold;margin:20px 0 9px}
+input,textarea{
+  width:100%;padding:14px;color:#fff;background:#0b0c10;
+  border:1px solid #394152;border-radius:10px;font:inherit;
+}
+textarea{min-height:150px;resize:vertical}
+button{
+  padding:13px 17px;margin-top:15px;border:0;border-radius:10px;
+  color:#fff;font-weight:bold;cursor:pointer;
+  background:linear-gradient(135deg,#6f42c1,#007e95);
+}
+button:disabled{opacity:.6;cursor:wait}
+#status{display:none;padding:13px;margin-top:18px;border-radius:10px;line-height:1.5}
+.info{display:block!important;background:#00f2fe15;color:#8ef8ff}
+.success{display:block!important;background:#2ecc7118;color:#75e6a1}
+.error{display:block!important;background:#e74c3c18;color:#ff9991}
+#previewSection{display:none;margin-top:28px;padding-top:22px;border-top:1px solid #303746}
+.subject{padding:14px;background:#0b0c10;border-radius:10px;overflow-wrap:anywhere}
+iframe{width:100%;height:520px;background:white;border:0;display:block}
+.frame{overflow:hidden;border:1px solid #394152;border-radius:10px;margin-top:15px}
+.small{font-size:12px;color:#929bad}
+.send{background:linear-gradient(135deg,#087e8b,#00a878)}
+@media(max-width:500px){body{padding:8px}.card{margin:8px auto}iframe{height:450px}}
+</style>
 </head>
 <body>
+<main class="card">
+  <h1>✦ ChatixAI Akıllı Bülten</h1>
+  <p>Duyurunu yaz, Gemini ile profesyonel bir HTML e-posta hazırla ve göndermeden önce kontrol et.</p>
 
-  <div class="admin-card">
-    <h1><i class="fa-solid fa-robot" style="color: #00f2fe;"></i> ChatixAI Akıllı Bülten Paneli</h1>
-    <p class="subtitle">Doğal dille duyurunuzu yazın, otomatik yedeklemeli Gemini AI sistemi kurumsal e-posta formatına dönüştürsün.</p>
+  <label for="password">Yönetici parolası</label>
+  <input id="password" type="password"
+    autocomplete="current-password" placeholder="ADMIN_PASSWORD değerini gir">
 
-    <label for="promptInput">Duyuru / Güncelleme Metni</label>
-    <textarea id="promptInput" placeholder="Örn: Spark modelimizi güncelledik, artık kodları çok daha hızlı analiz ediyor..."></textarea>
+  <p class="small">Parola yalnızca isteklerde kullanılır; tarayıcı depolamasına kaydedilmez.</p>
 
-    <button id="generateBtn" class="btn-primary"><i class="fa-solid fa-wand-magic-sparkles"></i> E-Posta Taslağı Hazırla</button>
+  <label for="prompt">Duyuru metni</label>
+  <textarea id="prompt" maxlength="6000"
+    placeholder="Örn: Spark modelimizi güncelledik. Artık kodları daha hızlı analiz ediyor..."></textarea>
 
-    <div id="statusMessage"></div>
+  <button id="generate">✨ E-Posta Taslağı Hazırla</button>
+  <div id="status" role="status" aria-live="polite"></div>
 
-    <div id="previewSection">
-      <h3>Canlı Önizleme</h3>
-      <br>
-      <div class="subject-box">
-        Konu: <span id="subjectText" style="color: #00f2fe;"></span>
-      </div>
-
-      <div class="iframe-container">
-        <iframe id="previewFrame"></iframe>
-      </div>
-
-      <button id="sendBulkBtn" class="btn-send"><i class="fa-solid fa-paper-plane"></i> Harika Görünüyor, Herkese Gönder!</button>
+  <section id="previewSection">
+    <h2>E-posta önizlemesi</h2>
+    <div class="subject">Konu: <strong id="subject"></strong></div>
+    <div class="frame">
+      <iframe id="preview" title="E-posta önizlemesi" sandbox=""></iframe>
     </div>
-  </div>
+    <button id="send" class="send">🚀 Harika Görünüyor, Herkese Gönder!</button>
+    <p class="small">Bu işlem listedeki tüm abonelere e-posta gönderir. Göndermeden önce içeriği kontrol et.</p>
+  </section>
+</main>
 
-  <script>
-    const generateBtn = document.getElementById('generateBtn');
-    const sendBulkBtn = document.getElementById('sendBulkBtn');
-    const promptInput = document.getElementById('promptInput');
-    const previewSection = document.getElementById('previewSection');
-    const subjectText = document.getElementById('subjectText');
-    const previewFrame = document.getElementById('previewFrame');
-    const statusMessage = document.getElementById('statusMessage');
+<script>
+const $ = id => document.getElementById(id);
+let draftReady = false;
 
-    function showStatus(text, type) {
-      statusMessage.style.display = 'block';
-      statusMessage.className = `status-${type}`;
-      statusMessage.innerHTML = text;
-    }
+function showStatus(text, type) {
+  $('status').className = type;
+  $('status').textContent = text;
+  $('status').style.display = 'block';
+}
 
-    generateBtn.addEventListener('click', async () => {
-      const prompt = promptInput.value.trim();
-      if (!prompt) {
-        showStatus('Lütfen bir duyuru metni yazın.', 'error');
-        return;
-      }
+function getHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'x-admin-password': $('password').value
+  };
+}
 
-      generateBtn.disabled = true;
-      generateBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Yapay Zeka Taslak Hazırlıyor...';
-      showStatus('Gemini modelleri taranıyor ve HTML e-posta şablonu oluşturuluyor...', 'info');
-      previewSection.style.display = 'none';
+async function parseResponse(response) {
+  let data;
 
-      try {
-        const response = await fetch('/api/admin/generate-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt })
-        });
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error('Sunucudan geçersiz yanıt alındı.');
+  }
 
-        const result = await response.json();
+  if (!response.ok || !data.success) {
+    throw new Error(data.message || 'İşlem başarısız.');
+  }
 
-        if (result.success) {
-          showStatus('E-posta taslağı başarıyla oluşturuldu! Aşağıdan kontrol edebilirsiniz.', 'success');
-          subjectText.innerText = result.data.subject;
+  return data;
+}
 
-          const frameDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
-          frameDoc.open();
-          frameDoc.write(result.data.htmlContent);
-          frameDoc.close();
+$('generate').addEventListener('click', async () => {
+  const password = $('password').value;
+  const prompt = $('prompt').value.trim();
 
-          previewSection.style.display = 'block';
-        } else {
-          showStatus(result.message || 'Taslak oluşturulamadı.', 'error');
-        }
-      } catch (err) {
-        showStatus('Sunucuyla iletişim kurulurken bir hata oluştu.', 'error');
-      } finally {
-        generateBtn.disabled = false;
-        generateBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> E-Posta Taslağı Hazırla';
-      }
+  if (!password) {
+    showStatus('Yönetici parolasını gir.', 'error');
+    return;
+  }
+
+  if (!prompt) {
+    showStatus('Önce duyuru metnini yaz.', 'error');
+    return;
+  }
+
+  $('generate').disabled = true;
+  $('previewSection').style.display = 'none';
+  draftReady = false;
+  showStatus('Gemini taslağı hazırlıyor...', 'info');
+
+  try {
+    const response = await fetch('/api/admin/generate-email', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({prompt})
     });
 
-    sendBulkBtn.addEventListener('click', async () => {
-      if (!confirm('Bu e-postayı veritabanındaki TÜM abonelere göndermek istediğinize emin misiniz?')) {
-        return;
-      }
+    const result = await parseResponse(response);
 
-      sendBulkBtn.disabled = true;
-      sendBulkBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Gönderiliyor...';
-      showStatus('Toplu e-posta gönderimi başlatıldı, lütfen bekleyin...', 'info');
+    $('subject').textContent = result.data.subject;
+    $('preview').srcdoc = result.data.htmlContent;
+    $('previewSection').style.display = 'block';
 
-      try {
-        const response = await fetch('/api/admin/send-bulk', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        });
+    draftReady = true;
+    showStatus('Taslak hazır. Önizlemeyi kontrol et.', 'success');
+  } catch (error) {
+    showStatus(error.message, 'error');
+  } finally {
+    $('generate').disabled = false;
+  }
+});
 
-        const result = await response.json();
+$('send').addEventListener('click', async () => {
+  if (!draftReady) return;
 
-        if (result.success) {
-          showStatus(result.message, 'success');
-          previewSection.style.display = 'none';
-          promptInput.value = '';
-        } else {
-          showStatus(result.message || 'Gönderim başarısız.', 'error');
-        }
-      } catch (err) {
-        showStatus('Toplu gönderim esnasında bir sunucu hatası oluştu.', 'error');
-      } finally {
-        sendBulkBtn.disabled = false;
-        sendBulkBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Harika Görünüyor, Herkese Gönder!';
-      }
+  if (!$('password').value) {
+    showStatus('Yönetici parolasını gir.', 'error');
+    return;
+  }
+
+  if (!confirm('Bülten TÜM abonelere gönderilecek. Devam edilsin mi?')) {
+    return;
+  }
+
+  $('send').disabled = true;
+  showStatus('Gönderim sürüyor. Lütfen bekle...', 'info');
+
+  try {
+    const response = await fetch('/api/admin/send-bulk', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({})
     });
-  </script>
+
+    const result = await parseResponse(response);
+
+    showStatus(result.message, 'success');
+    $('previewSection').style.display = 'none';
+    draftReady = false;
+    $('prompt').value = '';
+  } catch (error) {
+    showStatus(error.message, 'error');
+  } finally {
+    $('send').disabled = false;
+  }
+});
+</script>
 </body>
 </html>
