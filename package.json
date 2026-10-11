@@ -1,15 +1,18 @@
 {
-  "name": "chatixai-newsletter-system",
+  "name": "chatixai",
   "version": "1.0.0",
-  "description": "ChatixAI Mail Notification & AI Newsletter Management System",
+  "description": "ChatixAI Server and Newsletter System",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "axios": "^1.7.0",
-    "cors": "^2.8.5",
+    "@google/genai": "^0.1.1",
     "express": "^4.19.2",
-    "firebase-admin": "^12.1.0"
+    "firebase-admin": "^12.0.0",
+    "nodemailer": "^6.9.13"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
