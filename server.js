@@ -8,6 +8,9 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Statik dosyalar için public klasörünü aktif et (index.html ve admin.html buradan okunur)
+app.use(express.static(path.join(__dirname, 'public')));
+
 // 1. Firebase Başlatma (Render Environment Variables / JSON içeriğiyle)
 if (!admin.apps.length) {
     try {
@@ -51,7 +54,24 @@ Yalnızca ve yalnızca aşağıdaki JSON formatında yanıt ver. Markdown kod bl
 }
 `;
 
-// 4. Bülten Oluşturma ve Firebase'deki Abonelere Gönderme Rotası
+// 4. Kullanıcıların Abone Olması İçin Rota (API)
+app.post('/api/subscribe', async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ success: false, error: "E-posta adresi gerekli." });
+        }
+        await db.collection('subscribers').doc(email).set({
+            email: email,
+            subscribedAt: new Date().toISOString()
+        });
+        res.json({ success: true, message: "Başarıyla abone olundu!" });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 5. Bülten Oluşturma ve Firebase'deki Abonelere Gönderme Rotası
 app.post('/api/send-newsletter', async (req, res) => {
     try {
         const { promptText } = req.body;
@@ -86,7 +106,6 @@ app.post('/api/send-newsletter', async (req, res) => {
             throw new Error("Hiçbir Gemini modelinden yanıt alınamadı.");
         }
 
-        // JSON formatındaki yanıtı temizle ve parse et
         let cleanText = responseText.trim();
         if (cleanText.startsWith("```json")) {
             cleanText = cleanText.replace(/^```json/, "").replace(/```$/, "").trim();
@@ -96,7 +115,6 @@ app.post('/api/send-newsletter', async (req, res) => {
 
         const emailData = JSON.parse(cleanText);
 
-        // Firebase Firestore'dan aboneleri çek
         const subscribersSnapshot = await db.collection('subscribers').get();
         const subscribers = [];
         subscribersSnapshot.forEach(doc => {
@@ -110,7 +128,6 @@ app.post('/api/send-newsletter', async (req, res) => {
             return res.status(400).json({ success: false, error: "Firebase'de kayıtlı abone bulunamadı." });
         }
 
-        // Brevo SMTP ile toplu e-posta gönderimi
         let sentCount = 0;
         for (const email of subscribers) {
             try {
@@ -138,9 +155,9 @@ app.post('/api/send-newsletter', async (req, res) => {
     }
 });
 
-// 5. Basit Test Sayfası / Sağlık Kontrolü Rotası
-app.get('/', (req, res) => {
-    res.send('ChatixAI Mail Servisi Aktif ve Çalışıyor! 🚀');
+// Admin sayfası için özel rota (opsiyonel, public/admin.html doğrudan da açılabilir)
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
 const PORT = process.env.PORT || 3000;
